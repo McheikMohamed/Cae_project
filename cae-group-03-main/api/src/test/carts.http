@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:3000
+
+### Login the default user
+POST {{baseUrl}}/auths/login
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "password": "Mdp.123!"
+}
+
+> {%
+  client.global.set("access_token", response.body.token);
+%}
+
+### add to cart
+POST {{baseUrl}}/carts/add/1
+Content-Type: application/json
+Authorization: {{access_token}}
+
+### get cart
+GET {{baseUrl}}/carts/
+Content-Type: application/json
+Authorization: {{access_token}}

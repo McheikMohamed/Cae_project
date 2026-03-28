@@ -1,0 +1,147 @@
+@baseUrl = http://localhost:3000
+
+### create a new batch
+POST {{baseUrl}}/batches/create
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="newBatch"
+Content-Type: application/json
+
+{
+  "receiptDate": "2025-03-31T10:00:00Z",
+  "quantity": 100,
+  "pricePerUnit": 12.5,
+  "product": {
+    "name": "Example Product",
+    "description": "This is an example product.",
+    "productType": {
+      "libelle": "Example Product Type"
+    },
+    "unit": {
+      "name": "Kilogram"
+    }
+  },
+  "producer": {
+    "honorific": "Mr.",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "password": "securepassword123",
+    "phoneNumber": "+123456789",
+    "role": "Producer",
+    "address": {
+      "street": "123 Main Street",
+      "number": "456",
+      "box": "A",
+      "postalCode": 12345,
+      "city": "Cityville",
+      "country": {
+        "name": "Example Country"
+      }
+    },
+    "company": "Example Company"
+  }
+}
+--boundary
+Content-Disposition: form-data; name="picture"; filename="1156488.png"
+Content-Type: image/png
+
+< ./1156488.png
+
+--boundary
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return batch data", function() {
+    var body = response.body
+    console.log(body);
+  });
+%}
+
+### Get all Batches
+GET {{baseUrl}}/batches/all
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return batch data", function() {
+    var body = response.body
+    console.log(body);
+    body.length == 3
+  });
+ %}
+
+
+### Get a Batch by ID
+GET {{baseUrl}}/batches/1
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return batch data", function() {
+    var body = response.body
+    console.log(body);
+  });
+%}
+
+### Get all Products
+GET {{baseUrl}}/batches/products
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return batch data", function() {
+    var body = response.body
+    console.log(body);
+    body.length == 3
+  });
+%}
+
+### Get all Product Types
+GET {{baseUrl}}/batches/productTypes
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return batch data", function() {
+    var body = response.body
+    console.log(body);
+    body.length == 7
+  });
+%}
+
+### GET all sell data for batch
+GET {{baseUrl}}/batches/sellData/1
+

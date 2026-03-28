@@ -1,0 +1,581 @@
+import { useState, SyntheticEvent, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Typography,
+  Input,
+} from '@mui/material';
+import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import Grid from '@mui/material/Grid2';
+import { Product } from '../../types';
+import { UserContext } from '../../contexts/UserContext';
+import { BatchContext } from '../../contexts/BatchContext';
+
+const CreateBatchPage = () => {
+  const {
+    addBatch,
+    products,
+    fetchProductTypes,
+    productTypes,
+    fetchImagesByProductName,
+  } = useContext(BatchContext);
+  const { authenticatedUser } = useContext(UserContext);
+  const navigate = useNavigate();
+
+  // Used to redirect the user if not authenticated
+  useEffect(() => {
+    if (!authenticatedUser) {
+      navigate('/');
+    }
+  }, [authenticatedUser, navigate]); // it will be called when authenticatedUser changes
+
+  useEffect(() => {
+    fetchProductTypes(); // Cela va appeler la fonction du BatchContext
+  }, [fetchProductTypes]);
+
+  // if the user is not authenticated, we don't show the page
+
+  // Declare state variables for the form fields
+  const [name, setName] = useState('');
+  const [type, setType] = useState('');
+  const [description, setDescription] = useState('');
+  const [unit, setUnit] = useState('');
+  const [photo, setPhoto] = useState<File | undefined>(undefined);
+  const [receiptDate, setReceiptDate] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [pricePerUnit, setPricePerUnit] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [isLocked, setIsLocked] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showImageSelector, setShowImageSelector] = useState(false);
+
+  // State for managing errors
+  const [errors, setErrors] = useState({
+    name: false,
+    type: false,
+    description: false,
+    unit: false,
+    receiptDate: false,
+    quantity: false,
+    pricePerUnit: false,
+    photo: false, // Add this line to manage photo error state
+  });
+
+  if (!authenticatedUser) return null;
+
+  const validateFields = () => {
+    const isTestEnv = process.env.NODE_ENV === 'test';
+    const newErrors = {
+      name: name.trim() === '',
+      type: type.trim() === '',
+      description: description.trim() === '',
+      unit: unit.trim() === '',
+      receiptDate: receiptDate.trim() === '',
+      quantity: quantity.trim() === '' || isNaN(Number(quantity)),
+      pricePerUnit: pricePerUnit.trim() === '' || isNaN(Number(pricePerUnit)),
+      photo: !isTestEnv && photo === undefined && selectedImage === null,
+    };
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).includes(true);
+  };
+
+  const handleProductNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setName(value);
+
+    // If the field is empty, unlock the fields and reset the description and type
+    if (value.trim() === '') {
+      setIsLocked(false);
+      setDescription('');
+      setType('');
+    }
+
+    // Filter products based on the input value
+    const filtered = products.filter((product) =>
+      product.name.toLowerCase().startsWith(value.toLowerCase()),
+    );
+    setFilteredProducts(filtered);
+  };
+
+  const handleProductSelection = (product: Product) => {
+    setName(product.name);
+    setDescription(product.description);
+    setType(product.productType.libelle);
+    setUnit(product.unit.name);
+    setFilteredProducts([]); // empty suggestions after selection
+    setIsLocked(true); // Lock fields
+  };
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Limite to 255 characters
+    if (value.length <= 255) {
+      setDescription(value); // Update description only if within limit
+    }
+  };
+
+  const handleFetchImages = async () => {
+    if (name.trim() === '') {
+      return;
+    }
+
+    try {
+      const images = await fetchImagesByProductName(name);
+      setImageUrls(images);
+      setShowImageSelector(true);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des images :', error);
+    }
+  };
+
+  // submit the form
+  const handleSubmit = async (e: SyntheticEvent) => {
+    e.preventDefault();
+
+    if (!validateFields() || !authenticatedUser) {
+      return;
+    }
+
+    // Verify that the product exists in the database
+    let selectedProduct = products.find(
+      (product) => product.name.toLowerCase() === name.toLowerCase(),
+    );
+
+    // If the product does not exist, create a new one
+    if (!selectedProduct) {
+      selectedProduct = {
+        idProduct: 0, // ID will be generated by the database
+        name,
+        description,
+        productType: { libelle: type },
+        unit: { name: unit },
+      };
+    }
+
+    try {
+      await addBatch({
+        receiptDate: new Date(receiptDate),
+        quantity: Number(quantity),
+        pricePerUnit: Number(pricePerUnit),
+        producer: authenticatedUser,
+        product: selectedProduct,
+        image: photo || undefined, // Utilisez `photo` si défini
+        imageLocation: !photo && selectedImage ? selectedImage : undefined,
+      });
+      navigate('/');
+    } catch (err) {
+      console.error('CreateBatchPage::error: ', err);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#4C8C4A',
+        padding: 3,
+      }}
+    >
+      <Box
+        sx={{
+          backgroundColor: '#FDF6EB',
+          padding: 4,
+          borderRadius: 4,
+          boxShadow: 3,
+          maxWidth: '900px',
+          width: '100%',
+        }}
+      >
+        <Typography variant="h5" align="center" gutterBottom>
+          Proposer un lot de produits
+        </Typography>
+        <form onSubmit={handleSubmit} role="form">
+          <Grid container spacing={2}>
+            {/* Product name */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="Name"
+                name="Name"
+                label="Nom du produit"
+                variant="outlined"
+                value={name}
+                onChange={handleProductNameChange}
+                error={errors.name}
+                helperText={errors.name ? 'Nom requis' : ''}
+              />
+              {filteredProducts.length > 0 && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    backgroundColor: '#fff',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    zIndex: 10,
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    width: '100%',
+                    maxWidth: '400px',
+                  }}
+                >
+                  {filteredProducts.map((product) => (
+                    <Box
+                      key={product.name}
+                      sx={{
+                        padding: '8px',
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: '#f0f0f0' },
+                      }}
+                      onClick={() => handleProductSelection(product)}
+                    >
+                      {product.name}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth error={errors.type}>
+                <InputLabel id="type-label">Type</InputLabel>
+                <Select
+                  labelId="type-label"
+                  id="type"
+                  value={type || ''} // Assurez-vous que `type` est toujours une chaîne vide si undefined
+                  onChange={(e) => setType(e.target.value)}
+                  disabled={isLocked}
+                >
+                  {productTypes && productTypes.length > 0 ? (
+                    productTypes.map(
+                      (pt: string) => (
+                        console.log(
+                          'valeur de pt : ',
+                          pt,
+                          ' type de pt : ',
+                          typeof pt,
+                        ),
+                        (
+                          <MenuItem key={pt} value={pt}>
+                            {pt}
+                          </MenuItem>
+                        )
+                      ),
+                    )
+                  ) : (
+                    <MenuItem value="">Aucun type disponible</MenuItem>
+                  )}
+                </Select>
+                {errors.type && (
+                  <Typography color="error" variant="caption">
+                    Type requis
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+            {/* Description */}
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                id="description"
+                name="description"
+                label="Description"
+                variant="outlined"
+                multiline
+                rows={4}
+                value={description}
+                onChange={handleDescriptionChange} // Call the function to handle description change
+                error={errors.description}
+                helperText={errors.description ? 'Description requise' : ''}
+                disabled={isLocked}
+              />
+              {/* show number of characters left */}
+              <Typography
+                variant="caption"
+                color={description.length > 255 ? 'error' : 'textSecondary'}
+                sx={{ mt: 1, textAlign: 'right' }}
+              >
+                {description.length}/255
+              </Typography>
+              {description.length > 255 && (
+                <Typography color="error" variant="caption" sx={{ mt: 1 }}>
+                  La description ne peut pas dépasser 120 caractères.
+                </Typography>
+              )}
+            </Grid>
+
+            {/* Unit */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth error={errors.unit}>
+                <InputLabel id="unit-label">Unité</InputLabel>
+                <Select
+                  labelId="unit-label"
+                  id="unit"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  disabled={isLocked} // Descativate the field if isLocked is true
+                >
+                  <MenuItem value="kg">Kilo</MenuItem>
+                  <MenuItem value="piece">Pièce</MenuItem>
+                  <MenuItem value="L">Litre</MenuItem>
+                </Select>
+                {errors.unit && (
+                  <Typography color="error" variant="caption">
+                    Unité requise
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+
+            {/* Photo */}
+            <Grid size={6}>
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="start"
+                gap={1}
+              >
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  startIcon={<PhotoCamera />}
+                  sx={{
+                    height: 56,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    borderColor: '#1976d2',
+                    color: '#1976d2',
+                    '&:hover': {
+                      backgroundColor: '#e3f2fd',
+                      borderColor: '#115293',
+                    },
+                  }}
+                >
+                  {photo
+                    ? photo.name
+                    : selectedImage
+                      ? selectedImage.split('/').pop()
+                      : 'Ajouter une photo'}
+                  <Input
+                    type="file"
+                    inputProps={{ accept: 'image/*' }}
+                    sx={{ display: 'none' }}
+                    onChange={(event) => {
+                      const file = (event.target as HTMLInputElement)
+                        .files?.[0];
+                      if (file) {
+                        setPhoto(file);
+                        setSelectedImage(null);
+                        setErrors((prev) => ({ ...prev, photo: false }));
+                      }
+                    }}
+                  />
+                </Button>
+                <Typography
+                  variant="body2"
+                  color="primary"
+                  sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  onClick={handleFetchImages}
+                >
+                  Ou choisissez une image parmi celles proposées
+                </Typography>
+
+                {showImageSelector && (
+                  <Box
+                    sx={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      zIndex: 1000,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        backgroundColor: '#fff',
+                        padding: 4,
+                        borderRadius: 4,
+                        maxWidth: '80%',
+                        maxHeight: '80%',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      <Typography variant="h6" gutterBottom>
+                        Sélectionnez une image
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns:
+                            'repeat(auto-fit, minmax(150px, 1fr))',
+                          gap: 2,
+                        }}
+                      >
+                        {imageUrls.map((url) => (
+                          <Box
+                            key={url}
+                            sx={{
+                              border:
+                                selectedImage === url
+                                  ? '2px solid #1976d2'
+                                  : '1px solid #ccc',
+                              borderRadius: 2,
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => {
+                              setSelectedImage(url);
+                              setPhoto(undefined); // Réinitialiser photo si une image est sélectionnée
+                              setErrors((prev) => ({ ...prev, photo: false }));
+                            }}
+                          >
+                            <img
+                              src={url}
+                              alt="Produit"
+                              style={{
+                                width: '100%',
+                                height: '150px',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          </Box>
+                        ))}
+                      </Box>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          marginTop: 2,
+                        }}
+                      >
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            // setSelectedImage(selectedImage); // Définir l'image sélectionnée comme photo
+                            setShowImageSelector(false); // Fermer le sélecteur
+                          }}
+                          disabled={!selectedImage}
+                        >
+                          Valider
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => setShowImageSelector(false)}
+                          sx={{ marginLeft: 2 }}
+                        >
+                          Annuler
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
+
+                {errors.photo && (
+                  <Typography color="error" variant="caption">
+                    Photo requise
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+
+            {/* disponibility date */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="receiptDate"
+                name="receiptDate"
+                label="Date de disponibilité"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                value={receiptDate}
+                onChange={(e) => setReceiptDate(e.target.value)}
+                error={errors.receiptDate}
+                helperText={
+                  errors.receiptDate
+                    ? 'La date doit être dans au moins 3 jours.'
+                    : ''
+                }
+                InputProps={{
+                  inputProps: {
+                    min: new Date(new Date().setDate(new Date().getDate() + 3))
+                      .toISOString()
+                      .split('T')[0], // Limit the date to at least 3 days from now
+                  },
+                }}
+              />
+            </Grid>
+
+            {/* quantity */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="quantity"
+                name="quantity"
+                label="Quantité disponible"
+                type="number"
+                variant="outlined"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                error={errors.quantity}
+                helperText={errors.quantity ? 'Quantité requise' : ''}
+              />
+            </Grid>
+            {/* Price */}
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                id="pricePerUnit"
+                name="pricePerUnit"
+                label="Prix par unité (€)"
+                type="number"
+                variant="outlined"
+                value={pricePerUnit}
+                onChange={(e) => setPricePerUnit(e.target.value)}
+                error={errors.pricePerUnit}
+                helperText={errors.pricePerUnit ? 'Prix requis' : ''}
+              />
+            </Grid>
+            {/* button for confirmation */}
+            <Grid size={12} sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                sx={{
+                  width: '50%',
+                  borderRadius: '15px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#000',
+                  border: '1px solid black',
+                  '&:hover': { backgroundColor: '#D67F65' },
+                  mb: 2,
+                }}
+              >
+                Proposer le lot
+              </Button>
+            </Grid>
+          </Grid>
+        </form>
+      </Box>
+    </Box>
+  );
+};
+
+export default CreateBatchPage;

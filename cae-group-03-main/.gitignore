@@ -1,0 +1,10 @@
+### Mac
+.DS_Store
+### Windows
+Thumbs.db
+### Linux
+lost+found
+.env
+*.env
+node_modules
+node_modules/

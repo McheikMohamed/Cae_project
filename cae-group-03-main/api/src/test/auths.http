@@ -1,0 +1,344 @@
+@baseUrl = http://localhost:3000
+
+### Create the first user
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "honorific": "Mme.",
+  "firstName": "Marie",
+  "lastName": "Dubois",
+  "email": "marie.dubois89@valmont.be",
+  "password": "Mdp.123!",
+  "phoneNumber": "324745682",
+  "role": "CLIENT",
+  "company": "",
+  "address": {
+  "street": "Rue des Acacias",
+  "number": "12",
+  "box":"1",
+  "postalCode": 6730,
+  "city": "Valmont",
+  "country": {
+    "name": "Belgique"
+    }
+  }
+}
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return user data", function() {
+    var body = response.body
+    console.log(body);
+    client.assert(body.email == "marie.dubois89@valmont.be");
+    client.assert(body.firstName == "Marie" );
+    client.assert(body.role == "CLIENT");
+    client.assert(body.token)
+  });
+%}
+
+### Login the default user
+POST {{baseUrl}}/auths/login
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "password": "Mdp.123!"
+}
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return user data", function() {
+    var body = response.body
+    console.log(body);
+    client.assert(body.email == "marie.dubois89@valmont.be");
+    client.assert(body.firstName == "Marie" );
+    client.assert(body.role == "CLIENT");
+    client.assert(body.token)
+    client.global.set("token",response.token)
+  });
+%}
+
+### Create user with missing information 1
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "honorific": "Monsieur",
+  "firstName": "Leroy"
+}
+> {%
+  client.test("Request failed", function() {
+    client.assert(response.status === 400, "Response status is not 400");
+  });
+%}
+
+### Create user with missing information 2
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "honorific": "Monsieur",
+  "firstName": "Leroy",
+  "lastName": "Thomas",
+  "street": "Chemin des Erables",
+  "numberAndBox": "27b",
+  "postalCode": 6730,
+  "phoneNumber": "324745682",
+  "country": "Belgique",
+  "town": "Valmont"
+}
+> {%
+  client.test("Request failed", function() {
+    client.assert(response.status === 400, "Response status is not 400");
+  });
+%}
+
+### Create second user
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "honorific": "M.",
+  "firstName": "Leroy",
+  "lastName": "Thomas",
+  "email": "thomas.leroy@mont-vesdre.be",
+  "password": "Mdp.123!",
+  "phoneNumber": "324745682",
+  "role": "CLIENT",
+  "company": "",
+  "address": {
+    "street": "Chemin des Erables",
+    "number": "27",
+    "box":"12b",
+    "postalCode": 6730,
+    "city": "Mont-sur-Vesdre",
+    "country": {
+      "name": "Belgique"
+    }
+  }
+}
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return user data", function() {
+    var body = response.body
+    console.log(body);
+    client.assert(body.email == "thomas.leroy@mont-vesdre.be");
+    client.assert(body.firstName == "Leroy" );
+    client.assert(body.role == "CLIENT");
+    client.assert(body.token)
+    client.global.set("token",response.token)
+  });
+%}
+
+### Create user with an already used email
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "email": "thomas.leroy@mont-vesdre.be",
+  "honorific": "Monsieur",
+  "firstName": "Pasleroy",
+  "lastName": "PasThomas",
+  "street": "PasChemin des Erables",
+  "numberAndBox": "12b",
+  "postalCode": 6130,
+  "phoneNumber": "324744872",
+  "country": "Belgique",
+  "town": "Mont-sur-Vesdre",
+  "password": "Mdp.123!"
+}
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 400, "Response status is not 400");
+  });
+%}
+
+### login user with wrong informations
+POST {{baseUrl}}/auths/login
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "password": "passwd!"
+}
+> {%
+  client.test("Request failed", function() {
+    client.assert(response.status === 401, "Response status is not 401");
+  });
+%}
+
+### Update password with wrong oldPassword
+PATCH {{baseUrl}}/auths/updatePassword
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "oldPassword": "WrongPassword",
+  "newPassword": "Password123!",
+  "confirmPassword": "Password123!"
+}
+> {%
+  client.test("Request failed", function() {
+    client.assert(response.status === 500, "Response status is not 500");
+    client.assert(response.body.error == "Internal Server Error")
+  });
+%}
+
+### Update password with missing information
+PATCH {{baseUrl}}/auths/updatePassword
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "oldPassword": "Mdp.123!"
+}
+> {%
+  client.test("Request failed", function() {
+    client.assert(response.status === 400, "Response status is not 400");
+    client.assert(response.body.error == "Bad Request")
+  });
+%}
+
+### Update password with incorrect confirmPassword
+PATCH {{baseUrl}}/auths/updatePassword
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "oldPassword": "Mdp.123!",
+  "newPassword": "Password123!",
+  "confirmPassword": "WrongConfirmPassword"
+}
+> {%
+  client.test("Request failed", function() {
+    client.assert(response.status === 400, "Response status is not 400");
+    client.assert(response.body.error == "Bad Request")
+  });
+%}
+
+### Update user password
+
+PATCH {{baseUrl}}/auths/updatePassword
+Content-Type: application/json
+
+{
+  "email": "marie.dubois89@valmont.be",
+  "oldPassword": "Mdp.123!",
+  "newPassword": "Password123!",
+  "confirmPassword": "Password123!"
+}
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+%}
+
+### Create producteur account
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "honorific": "M.",
+  "firstName": "Producteur",
+  "lastName": "Producteur",
+  "email": "Producteur@Producteur.be",
+  "password": "Mdp.123!",
+  "phoneNumber": "3211111111",
+  "role": "PRODUCTEUR",
+  "company": "",
+  "address": {
+    "street": "Rue des Producteur",
+    "number": "1",
+    "box":"1",
+    "postalCode": 1000,
+    "city": "Producteur",
+    "country": {
+      "name": "Producteur"
+    }
+  }
+}
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return user data", function() {
+    var body = response.body
+    console.log(body);
+    client.assert(body.email == "Producteur@Producteur.be");
+    client.assert(body.firstName == "Producteur" );
+    client.assert(body.role == "PRODUCTEUR");
+    client.assert(body.token)
+  });
+%}
+
+### Create manager account
+POST {{baseUrl}}/auths/register
+Content-Type: application/json
+
+{
+  "honorific": "M.",
+  "firstName": "Manager",
+  "lastName": "Manager",
+  "email": "Manager@Manager.be",
+  "password": "Mdp.123!",
+  "phoneNumber": "3211111111",
+  "role": "MANAGER",
+  "company": "",
+  "address": {
+    "street": "Rue des Manager",
+    "number": "1",
+    "box":"1",
+    "postalCode": 1000,
+    "city": "Manager",
+    "country": {
+      "name": "Manager"
+    }
+  }
+}
+
+> {%
+  client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+  });
+
+  client.test("Response content-type is json", function() {
+    var type = response.contentType.mimeType;
+    client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+  });
+  client.test("Should return user data", function() {
+    var body = response.body
+    console.log(body);
+    client.assert(body.email == "Manager@Manager.be");
+    client.assert(body.firstName == "Manager" );
+    client.assert(body.role == "MANAGER");
+    client.assert(body.token)
+  });
+%}
+

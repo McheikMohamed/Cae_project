@@ -1,0 +1,836 @@
+openapi: 3.1.0
+info:
+  title: CAE exercices demo API
+  description: API de démonstration pour le cours de CAE exercices
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:3000'
+paths:
+
+  /auths/login:
+    post:
+      summary: Connexion
+      description: Connexion d'un utilisateur
+      requestBody:
+        required: true
+        description: Identifiants de connexion
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              description: Token de connexion JWT
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '400':
+          description: Requête mal formée
+        '401':
+          description: Identifiants incorrects
+
+  /auths/register:
+    post:
+      summary: Inscription
+      description: Inscription d'un utilisateur
+      requestBody:
+        required: true
+        description: Identifiants de l'utilisateur
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUser'
+      responses:
+        '200':
+          description: Inscription réussie, renvoie un token JWT
+          content:
+            application/json:
+              description: Token de connexion JWT
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '400':
+          description: Requête mal formée
+        '409':
+          description: Utilisateur déjà existant
+
+  /auths/account:
+    get:
+      summary: Récupérer les informations de l'utilisateur
+      description: Récupère les informations de l'utilisateur connecté à partir du token JWT.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Informations de l'utilisateur récupérées avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Token manquant ou invalide
+        '404':
+          description: Utilisateur non trouvé
+
+  /auths/me:
+    post:
+      summary: Mettre à jour le token JWT
+      description: Génère un nouveau token JWT pour l'utilisateur connecté.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Nouveau token JWT généré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '401':
+          description: Token manquant ou invalide
+        '404':
+          description: Utilisateur non trouvé
+
+  /auths/updatePassword:
+    patch:
+      summary: Mettre à jour le mot de passe
+      description: Permet à un utilisateur de mettre à jour son mot de passe.
+      requestBody:
+        required: true
+        description: Informations nécessaires pour mettre à jour le mot de passe
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordUpdate'
+      responses:
+        '200':
+          description: Mot de passe mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password updated successfully
+        '400':
+          description: Requête mal formée ou mot de passe non valide
+        '500':
+          description: Erreur lors de la mise à jour du mot de passe
+  /batches/create:
+    post:
+      summary: Créer un nouveau batch
+      description: Permet de créer un nouveau batch avec une image associée.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                newBatch:
+                  $ref: '#/components/schemas/NewBatch'
+                picture:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Batch créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '400':
+          description: Requête invalide
+  /batches/all:
+    get:
+      summary: Récupérer tous les batches
+      description: Permet de récupérer tous les batches disponibles.
+      responses:
+        '200':
+          description: Liste des batches récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Batch'
+  /batches/{id}:
+    get:
+      summary: Récupérer un batch par ID
+      description: Permet de récupérer un batch spécifique en fonction de son ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID du batch
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Batch récupéré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '404':
+          description: Batch non trouvé
+  /batches/products:
+    get:
+      summary: Récupérer tous les produits
+      description: Permet de récupérer tous les produits disponibles.
+      responses:
+        '200':
+          description: Liste des produits récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+  /batches/productTypes:
+    get:
+      summary: Récupérer tous les types de produits
+      description: Permet de récupérer tous les types de produits disponibles.
+      responses:
+        '200':
+          description: Liste des types de produits récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductType'
+<<<<<<< HEAD
+  /batches/{id}/status:
+    patch:
+      summary: Mettre à jour le statut d'un batch
+      description: Permet de mettre à jour le statut d'un batch spécifique.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID du batch
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Batch'
+      responses:
+        '200':
+          description: Statut du batch mis à jour avec succès
+        '400':
+          description: Requête invalide
+  /batches/sellData/{id}:
+    get:
+      summary: Récupérer les données de vente d'un batch
+      description: Permet de récupérer les données de vente d'un batch spécifique.
+=======
+  /batches/sellData/{id}:
+    get:
+      summary: Récupérer les données de vente d'un batch
+      description: |
+        Permet de récupérer les données de vente associées à un batch spécifique en fonction de son identifiant.
+>>>>>>> d8dac4339fdd605398fbf62f46ca26626aca49f6
+      parameters:
+        - name: id
+          in: path
+          required: true
+<<<<<<< HEAD
+          description: ID du batch
+=======
+          description: Identifiant du batch pour lequel récupérer les données de vente
+>>>>>>> d8dac4339fdd605398fbf62f46ca26626aca49f6
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Données de vente récupérées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+<<<<<<< HEAD
+                properties:
+                  salesData:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        quantitySold:
+                          type: integer
+=======
+                additionalProperties: true
+                description: Les données de vente associées au batch
+        '404':
+          description: Batch non trouvé
+>>>>>>> d8dac4339fdd605398fbf62f46ca26626aca49f6
+  /reservations/createReservationLine:
+    post:
+      summary: Créer une ligne de réservation
+      description: Permet de créer une ligne de réservation pour un batch spécifique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationLine'
+      responses:
+        '200':
+          description: Ligne de réservation créée avec succès
+        '400':
+          description: Ligne de réservation invalide
+  /reservations/createReservation:
+    post:
+      summary: Créer une réservation
+      description: Permet de créer une réservation avec une liste de batches.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/NewBatch'
+      responses:
+        '200':
+          description: Réservation créée avec succès
+        '400':
+          description: Réservation invalide
+  /reservations/getReservationsLines:
+    get:
+      summary: Récupérer toutes les lignes de réservation
+      description: Permet de récupérer toutes les lignes de réservation pour une réservation donnée.
+      parameters:
+        - name: reservationId
+          in: query
+          required: true
+          description: ID de la réservation
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des lignes de réservation récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReservationLine'
+        '400':
+          description: Requête invalide
+  /reservations/getReservations:
+    get:
+      summary: Récupérer toutes les réservations
+      description: Permet de récupérer toutes les réservations.
+      responses:
+        '200':
+          description: Liste des réservations récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+  /reservations/updateReservationStatus:
+    patch:
+      summary: Mettre à jour le statut d'une réservation
+      description: Permet de mettre à jour le statut d'une réservation existante.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reservation'
+      responses:
+        '200':
+          description: Statut de la réservation mis à jour avec succès
+        '400':
+          description: Réservation invalide
+  /reservations/userHistorics:
+    get:
+      summary: Récupérer l'historique des réservations fermées de l'utilisateur authentifié
+      description: |
+        Permet de récupérer toutes les réservations fermées liées à l'utilisateur authentifié. 
+        Cette méthode utilise le token JWT présent dans l'en-tête Authorization pour identifier l'utilisateur.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des réservations fermées récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          description: Token JWT manquant ou invalide
+        '404':
+          description: Utilisateur non trouvé
+  /reservations/delete:
+    patch:
+      summary: Supprimer une réservation
+      description: |
+        Permet de supprimer une réservation existante en fonction de son identifiant.
+        L'identifiant de la réservation est fourni dans le corps de la requête.
+      requestBody:
+        required: true
+        description: Identifiant de la réservation à supprimer
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reservationId:
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: Réservation supprimée avec succès
+        '400':
+          description: Requête invalide ou identifiant de réservation manquant
+        '404':
+          description: Réservation non trouvée
+  /carts/add/{id}:
+    post:
+      summary: Ajouter un lot au panier
+      description: |
+        Ajoute un lot (batch) au panier de l'utilisateur identifié par son token JWT.
+        L'utilisateur est identifié via le header Authorization contenant le token JWT.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant du batch à ajouter au panier
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lot ajouté au panier avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          description: Token JWT manquant ou invalide
+        '404':
+          description: Lot ou utilisateur non trouvé
+  /carts/:
+    get:
+      summary: Récupérer tous les lots du panier
+      description: |
+        Récupère tous les lots (batches) présents dans le panier de l'utilisateur authentifié.
+        L'utilisateur est identifié via le header Authorization contenant le token JWT.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des lots présents dans le panier récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Batch'
+        '401':
+          description: Token JWT manquant ou invalide
+
+  /carts/delete/{batchId}:
+    delete:
+      summary: Supprimer un lot du panier
+      description: |
+        Supprime un lot (batch) du panier de l'utilisateur authentifié en fonction de l'identifiant du batch.
+        L'utilisateur est identifié via le header Authorization contenant le token JWT.
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          description: Identifiant du batch à retirer du panier
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lot supprimé du panier avec succès
+        '401':
+          description: Token JWT manquant ou invalide
+        '404':
+          description: Lot ou utilisateur non trouvé
+<<<<<<< HEAD
+  /notifications/create:
+    post:
+      summary: Créer une notification
+      description: Permet de créer une notification pour un utilisateur spécifique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  example: 1
+                message:
+                  type: string
+                  example: "Nouvelle notification"
+      responses:
+        '200':
+          description: Notification créée avec succès
+        '400':
+          description: Requête invalide
+  /notifications/all:
+    get:
+      summary: Récupérer toutes les notifications
+      description: Permet de récupérer toutes les notifications pour un utilisateur spécifique.
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          description: ID de l'utilisateur
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des notifications récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    message:
+                      type: string
+                      example: "Nouvelle notification"
+                    date:
+                      type: string
+                      format: date-time
+                      example: "2025-04-01T12:00:00Z"
+=======
+  /carts/updateQuantity/{batchId}:
+  patch:
+    summary: Mettre à jour la quantité d'un lot dans le panier
+    description: |
+      Permet de mettre à jour la quantité d'un lot (batch) dans le panier de l'utilisateur authentifié.
+      L'utilisateur est identifié via le token JWT présent dans l'en-tête Authorization.
+    parameters:
+      - name: batchId
+        in: path
+        required: true
+        description: Identifiant du batch à mettre à jour
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      description: Objet contenant la nouvelle quantité à mettre à jour
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              quantity:
+                type: integer
+                example: 5
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Quantité mise à jour avec succès
+      '400':
+        description: Requête invalide ou quantité non valide
+      '401':
+        description: Token JWT manquant ou invalide
+      '404':
+        description: Lot ou utilisateur non trouvé
+
+>>>>>>> d8dac4339fdd605398fbf62f46ca26626aca49f6
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Credentials:
+      type: object
+      properties:
+        email:
+          type: string
+          example: manager@email.com
+        password:
+          type: string
+          example: manager
+    AuthenticatedUser:
+      type: object
+      properties:
+        username:
+          type: string
+          example: manager
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im1hbmFnZXIiLCJpYXQiOjE1MTYyMzkwMjJ9.4TJok9J
+    NewUser:
+      type: object
+      properties:
+        email:
+          type: string
+          example: example@gmail.com
+        honorific:
+          type: string
+          example: M.
+        firstName:
+          type: string
+          example: Joe
+        lastName:
+          type: string
+          example: Doe
+        address:
+          $ref: '#/components/schemas/NewAddress'
+        phoneNumber:
+          type: string
+          example: 0123456789
+        password:
+          type: string
+          example: password
+        role:
+          type: string
+          example: USER
+        company:
+          type: string
+          nullable: true
+          example: null
+    NewAddress:
+      type: object
+      properties:
+        street:
+          type: string
+          example: rue d'example
+        number:
+          type: string
+          example: 12
+        box:
+          type: string
+          nullable: true
+          example: A
+        postalCode:
+          type: integer
+          example: 1150
+        city:
+          type: string
+          example: Brussels
+        country:
+          $ref: '#/components/schemas/NewCountry'
+    NewCountry:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Belgium
+    PasswordUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          example: example@gmail.com
+        oldPassword:
+          type: string
+          example: oldPassword123
+        newPassword:
+          type: string
+          example: newPassword456
+        confirmPassword:
+          type: string
+          example: newPassword456
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: example@gmail.com
+        firstName:
+          type: string
+          example: Joe
+        lastName:
+          type: string
+          example: Doe
+        phoneNumber:
+          type: string
+          example: 0123456789
+        role:
+          type: string
+          example: USER
+        company:
+          type: string
+          nullable: true
+          example: null
+        address:
+          $ref: '#/components/schemas/NewAddress'
+    NewBatch:
+      type: object
+      properties:
+        receiptDate:
+          type: string
+          format: date
+          example: 2025-04-01
+        quantity:
+          type: integer
+          example: 100
+        pricePerUnit:
+          type: number
+          format: float
+          example: 10.5
+        product:
+          $ref: '#/components/schemas/NewProduct'
+    Batch:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        receiptDate:
+          type: string
+          format: date
+          example: 2025-04-01
+        quantity:
+          type: integer
+          example: 100
+        pricePerUnit:
+          type: number
+          format: float
+          example: 10.5
+        product:
+          $ref: '#/components/schemas/Product'
+    NewProduct:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Produit A"
+        description:
+          type: string
+          example: "Description du produit A"
+        productType:
+          $ref: '#/components/schemas/NewProductType'
+        unit:
+          $ref: '#/components/schemas/NewUnit'
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Produit A"
+        description:
+          type: string
+          example: "Description du produit A"
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        unit:
+          $ref: '#/components/schemas/Unit'
+    NewProductType:
+      type: object
+      properties:
+        libelle:
+          type: string
+          example: "Type A"
+    ProductType:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        libelle:
+          type: string
+          example: "Type A"
+    NewUnit:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Kilogramme"
+    Unit:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Kilogramme"
+    ReservationLine:
+      type: object
+      properties:
+        idReservationLine:
+          type: integer
+          example: 1
+        batch:
+          $ref: '#/components/schemas/Batch'
+        quantity:
+          type: integer
+          example: 10
+        reservation:
+          $ref: '#/components/schemas/Reservation'
+    Reservation:
+      type: object
+      properties:
+        idReservation:
+          type: integer
+          example: 1
+        user:
+          type: string
+          example: "user@example.com"
+        recoveryDate:
+          type: string
+          format: date
+          example: "2025-04-01"
+        status:
+          type: string
+          example: "PENDING"
+    Cart:
+      type: object
+      properties:
+        idCart:
+          type: integer
+          example: 1
+        user:
+          $ref: '#/components/schemas/User'
+        batches:
+          type: array
+          items:
+            $ref: '#/components/schemas/Batch'
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 1
+        message:
+          type: string
+          example: "Refus de la demande"
+        date:
+          type: string
+          format: date-time
+          example: "2025-04-01T12:00:00Z"
